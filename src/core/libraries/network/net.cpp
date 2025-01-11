@@ -12,9 +12,13 @@
 
 #include "common/assert.h"
 #include "common/logging/log.h"
+#include "common/singleton.h"
 #include "core/libraries/error_codes.h"
 #include "core/libraries/libs.h"
 #include "core/libraries/network/net.h"
+
+#include "net_error.h"
+#include "sockets.h"
 
 namespace Libraries::Net {
 
@@ -121,8 +125,14 @@ int PS4_SYSV_ABI sceNetBandwidthControlSetPolicy() {
 }
 
 int PS4_SYSV_ABI sceNetBind(OrbisNetId s, const OrbisNetSockaddr* addr, u32 addrlen) {
-    LOG_ERROR(Lib_Net, "(STUBBED) called");
-    return ORBIS_OK;
+    auto* netcall = Common::Singleton<NetInternal>::Instance();
+    auto sock = netcall->FindSocket(s);
+    if (!sock) {
+        net_errno = ORBIS_NET_EBADF;
+        LOG_ERROR(Lib_Net, "socket id is invalid = {}", s);
+        return ORBIS_NET_ERROR_EBADF;
+    }
+    return sock->Bind(addr, addrlen);
 }
 
 int PS4_SYSV_ABI sceNetClearDnsCache() {
@@ -545,18 +555,83 @@ int PS4_SYSV_ABI sceNetEpollAbort() {
     return ORBIS_OK;
 }
 
-int PS4_SYSV_ABI sceNetEpollControl() {
-    LOG_ERROR(Lib_Net, "(STUBBED) called");
-    return ORBIS_OK;
+int PS4_SYSV_ABI sceNetEpollControl(OrbisNetId eid, int op, OrbisNetId id,
+                                    OrbisNetEpollEvent* event) {
+    auto* net_epoll = Common::Singleton<NetEpollInternal>::Instance();
+    auto epoll = net_epoll->FindEpoll(eid);
+    if (!epoll) {
+        net_errno = ORBIS_NET_EBADF;
+        LOG_ERROR(Lib_Net, "epoll id is invalid = {}", eid);
+        return ORBIS_NET_ERROR_EBADF;
+    }
+    if (id == 100) {
+        UNREACHABLE_MSG("Hitted resolver id not supported");
+    }
+    auto* socket_call = Common::Singleton<NetInternal>::Instance();
+    auto sock = socket_call->FindSocket(id);
+    if (!sock) {
+        net_errno = ORBIS_NET_EBADF;
+        LOG_ERROR(Lib_Net, "socket id is invalid = {}", id);
+        return ORBIS_NET_ERROR_EBADF;
+    }
+    auto posixSocket = std::dynamic_pointer_cast<PosixSocket>(sock);
+    if (!posixSocket) {
+        net_errno = ORBIS_NET_EBADF;
+        LOG_ERROR(Lib_Net, "Can't create posix socket");
+        return ORBIS_NET_ERROR_EBADF;
+    }
+
+    switch (op) {
+    case ORBIS_NET_EPOLL_CTL_ADD: {
+        int add = epoll->Add(id, posixSocket->sock, event);
+        if (add == ORBIS_NET_ERROR_EEXIST) {
+            net_errno = ORBIS_NET_EEXIST;
+            LOG_ERROR(Lib_Net, "epoll event already added");
+            return ORBIS_NET_ERROR_EEXIST;
+        }
+        return ORBIS_OK;
+    }
+    case ORBIS_NET_EPOLL_CTL_DEL: {
+        int del = epoll->Del(id, posixSocket->sock, event);
+        if (del == ORBIS_NET_ERROR_ENOENT) {
+            net_errno = ORBIS_NET_ENOENT;
+            LOG_ERROR(Lib_Net, "no epoll event in wait state");
+            return ORBIS_NET_ERROR_ENOENT;
+        }
+        return ORBIS_OK;
+    }
+    case ORBIS_NET_EPOLL_CTL_MOD: {
+        int mod = epoll->Mod(id, posixSocket->sock, event);
+        if (mod == ORBIS_NET_ERROR_ENOENT) {
+            net_errno = ORBIS_NET_ENOENT;
+            LOG_ERROR(Lib_Net, "no epoll event in wait state");
+            return ORBIS_NET_ERROR_ENOENT;
+        }
+        return ORBIS_OK;
+    }
+    default:
+        net_errno = ORBIS_NET_EINVAL;
+        LOG_ERROR(Lib_Net, "Unknown operation = {}", op);
+        return ORBIS_NET_ERROR_EINVAL;
+    }
 }
 
-int PS4_SYSV_ABI sceNetEpollCreate() {
-    LOG_ERROR(Lib_Net, "(STUBBED) called");
-    return ORBIS_OK;
+int PS4_SYSV_ABI sceNetEpollCreate(const char* name, int flags) {
+    LOG_DEBUG(Lib_Net, "name = {} flags= {}", std::string(name), flags);
+    auto* net_epoll = Common::Singleton<NetEpollInternal>::Instance();
+    auto epoll = std::make_shared<NetEpoll>();
+    auto id = ++net_epoll->next_epool_sock_id;
+    net_epoll->epolls.emplace(id, epoll);
+    return id;
 }
 
-int PS4_SYSV_ABI sceNetEpollDestroy() {
-    LOG_ERROR(Lib_Net, "(STUBBED) called");
+int PS4_SYSV_ABI sceNetEpollDestroy(int eid) {
+    auto* net_epoll = Common::Singleton<NetEpollInternal>::Instance();
+    if (net_epoll->EraseEpoll(eid) == 0) {
+        net_errno = ORBIS_NET_EBADF;
+        LOG_ERROR(Lib_Net, "Error deleting eid = {}", eid);
+        return ORBIS_NET_ERROR_EBADF;
+    }
     return ORBIS_OK;
 }
 
@@ -781,9 +856,15 @@ int PS4_SYSV_ABI sceNetIoctl() {
     return ORBIS_OK;
 }
 
-int PS4_SYSV_ABI sceNetListen() {
-    LOG_ERROR(Lib_Net, "(STUBBED) called");
-    return ORBIS_OK;
+int PS4_SYSV_ABI sceNetListen(OrbisNetId s, int backlog) {
+    auto* netcall = Common::Singleton<NetInternal>::Instance();
+    auto sock = netcall->FindSocket(s);
+    if (!sock) {
+        net_errno = ORBIS_NET_EBADF;
+        LOG_ERROR(Lib_Net, "socket id is invalid = {}", s);
+        return ORBIS_NET_ERROR_EBADF;
+    }
+    return sock->Listen(backlog);
 }
 
 int PS4_SYSV_ABI sceNetMemoryAllocate() {
@@ -870,9 +951,9 @@ int PS4_SYSV_ABI sceNetResolverConnectDestroy() {
     return ORBIS_OK;
 }
 
-int PS4_SYSV_ABI sceNetResolverCreate() {
-    LOG_ERROR(Lib_Net, "(STUBBED) called");
-    return ORBIS_OK;
+int PS4_SYSV_ABI sceNetResolverCreate(const char* name, int memid, int flags) {
+    LOG_ERROR(Lib_Net, "(DUMMY) name = {} memid ={} flags={}", std::string(name), memid, flags);
+    return 100; // return a fake resolver id
 }
 
 int PS4_SYSV_ABI sceNetResolverDestroy() {
@@ -885,8 +966,16 @@ int PS4_SYSV_ABI sceNetResolverGetError() {
     return ORBIS_OK;
 }
 
-int PS4_SYSV_ABI sceNetResolverStartAton() {
-    LOG_ERROR(Lib_Net, "(STUBBED) called");
+int PS4_SYSV_ABI sceNetResolverStartAton(int rid, const u32* addr, char* hostname, int hostname_len,
+                                         int timeout, int retry, int flags) {
+    LOG_ERROR(Lib_Net, "rid = {} , hostname_len ={} timeout={} retry={} flags={}", rid,
+              hostname_len, timeout, retry, flags);
+    struct hostent* resolved = gethostbyaddr((const char*)addr, hostname_len, AF_INET);
+    if (resolved != nullptr) {
+        strcpy(hostname, resolved->h_name);
+    } else {
+        strcpy(hostname, "localhost"); // dummy
+    }
     return ORBIS_OK;
 }
 
@@ -925,9 +1014,16 @@ int PS4_SYSV_ABI sceNetSendmsg() {
     return ORBIS_OK;
 }
 
-int PS4_SYSV_ABI sceNetSendto() {
-    LOG_ERROR(Lib_Net, "(STUBBED) called");
-    return ORBIS_OK;
+int PS4_SYSV_ABI sceNetSendto(OrbisNetId s, const void* buf, u32 len, int flags,
+                              const OrbisNetSockaddr* addr, u32 addrlen) {
+    auto* netcall = Common::Singleton<NetInternal>::Instance();
+    auto sock = netcall->FindSocket(s);
+    if (!sock) {
+        net_errno = ORBIS_NET_EBADF;
+        LOG_ERROR(Lib_Net, "socket id is invalid = {}", s);
+        return ORBIS_NET_ERROR_EBADF;
+    }
+    return sock->SendPacket(buf, len, flags, addr, addrlen);
 }
 
 int PS4_SYSV_ABI sceNetSetDns6Info() {
@@ -950,9 +1046,17 @@ int PS4_SYSV_ABI sceNetSetDnsInfoToKernel() {
     return ORBIS_OK;
 }
 
-int PS4_SYSV_ABI sceNetSetsockopt() {
-    LOG_ERROR(Lib_Net, "(STUBBED) called");
-    return ORBIS_OK;
+int PS4_SYSV_ABI sceNetSetsockopt(OrbisNetId s, int level, int optname, const void* optval,
+                                  u32 optlen) {
+    LOG_ERROR(Lib_Net, "s = {} level = {} optname = {} optlen = {}", s, level, optname, optlen);
+    auto* netcall = Common::Singleton<NetInternal>::Instance();
+    auto sock = netcall->FindSocket(s);
+    if (!sock) {
+        net_errno = ORBIS_NET_EBADF;
+        LOG_ERROR(Lib_Net, "socket id is invalid = {}", s);
+        return ORBIS_NET_ERROR_EBADF;
+    }
+    return sock->SetSocketOptions(level, optname, optval, optlen);
 }
 
 int PS4_SYSV_ABI sceNetShowIfconfig() {
@@ -1040,9 +1144,27 @@ int PS4_SYSV_ABI sceNetShutdown() {
     return ORBIS_OK;
 }
 
-int PS4_SYSV_ABI sceNetSocket(const char* name, int family, int type, int protocol) {
-    LOG_ERROR(Lib_Net, "(STUBBED) called");
-    return ORBIS_OK;
+OrbisNetId PS4_SYSV_ABI sceNetSocket(const char* name, int family, int type, int protocol) {
+    LOG_ERROR(Lib_Net, "name = {} family = {} type = {} protocol = {}", std::string(name), family,
+              type, protocol);
+    SocketPtr sock;
+    switch (type) {
+    case ORBIS_NET_SOCK_STREAM:
+    case ORBIS_NET_SOCK_DGRAM:
+    case ORBIS_NET_SOCK_RAW:
+        sock = std::make_shared<PosixSocket>(family, type, protocol);
+        break;
+    case ORBIS_NET_SOCK_DGRAM_P2P:
+    case ORBIS_NET_SOCK_STREAM_P2P:
+        sock = std::make_shared<P2PSocket>(family, type, protocol);
+        break;
+    default:
+        UNREACHABLE_MSG("Unknown type {}", type);
+    }
+    auto* netcall = Common::Singleton<NetInternal>::Instance();
+    auto id = ++netcall->next_sock_id;
+    netcall->socks.emplace(id, sock);
+    return id;
 }
 
 int PS4_SYSV_ABI sceNetSocketAbort() {
