@@ -16,16 +16,26 @@ struct VsAttribSpecialization {
     AmdGpu::NumberClass num_class{};
 
     auto operator<=>(const VsAttribSpecialization&) const = default;
+
+    [[nodiscard]] bool IsCompatible(const VsAttribSpecialization& other) const {
+        return *this == other;
+    }
 };
 
 struct BufferSpecialization {
     u16 stride : 14;
     u16 is_storage : 1;
+    u16 swizzle_enable : 1;
+    u8 index_stride : 2 = 0;
+    u8 element_size : 2 = 0;
     u32 size = 0;
 
-    bool operator==(const BufferSpecialization& other) const {
+    [[nodiscard]] bool IsCompatible(const BufferSpecialization& other) const {
         return stride == other.stride && is_storage == other.is_storage &&
-               (size >= other.is_storage || is_storage);
+               swizzle_enable == other.swizzle_enable &&
+               (!swizzle_enable ||
+                (index_stride == other.index_stride && element_size == other.element_size)) &&
+               (is_storage || size >= other.size);
     }
 };
 
@@ -35,6 +45,10 @@ struct TextureBufferSpecialization {
     AmdGpu::NumberConversion num_conversion{};
 
     auto operator<=>(const TextureBufferSpecialization&) const = default;
+
+    [[nodiscard]] bool IsCompatible(const TextureBufferSpecialization& other) const {
+        return *this == other;
+    }
 };
 
 struct ImageSpecialization {
@@ -45,6 +59,10 @@ struct ImageSpecialization {
     AmdGpu::NumberConversion num_conversion{};
 
     auto operator<=>(const ImageSpecialization&) const = default;
+
+    [[nodiscard]] bool IsCompatible(const ImageSpecialization& other) const {
+        return *this == other;
+    }
 };
 
 struct FMaskSpecialization {
@@ -52,12 +70,20 @@ struct FMaskSpecialization {
     u32 height;
 
     auto operator<=>(const FMaskSpecialization&) const = default;
+
+    [[nodiscard]] bool IsCompatible(const FMaskSpecialization& other) const {
+        return *this == other;
+    }
 };
 
 struct SamplerSpecialization {
     bool force_unnormalized = false;
 
     auto operator<=>(const SamplerSpecialization&) const = default;
+
+    [[nodiscard]] bool IsCompatible(const SamplerSpecialization& other) const {
+        return *this == other;
+    }
 };
 
 /**
@@ -101,6 +127,11 @@ struct StageSpecialization {
                      [](auto& spec, const auto& desc, AmdGpu::Buffer sharp) {
                          spec.stride = sharp.GetStride();
                          spec.is_storage = desc.IsStorage(sharp);
+                         spec.swizzle_enable = sharp.swizzle_enable;
+                         if (spec.swizzle_enable) {
+                             spec.index_stride = sharp.index_stride;
+                             spec.element_size = sharp.element_size;
+                         }
                          if (!spec.is_storage) {
                              spec.size = sharp.GetSize();
                          }
@@ -168,7 +199,9 @@ struct StageSpecialization {
         }
     }
 
-    bool operator==(const StageSpecialization& other) const {
+    /// Checks if the permutation this specialization is for can be used in place of 'other'.
+    /// Note that this operation is not bidirectional.
+    [[nodiscard]] bool IsCompatible(const StageSpecialization& other) const {
         if (start != other.start) {
             return false;
         }
@@ -179,7 +212,7 @@ struct StageSpecialization {
             return false;
         }
         for (u32 i = 0; i < vs_attribs.size(); i++) {
-            if (vs_attribs[i] != other.vs_attribs[i]) {
+            if (!vs_attribs[i].IsCompatible(other.vs_attribs[i])) {
                 return false;
             }
         }
@@ -191,27 +224,27 @@ struct StageSpecialization {
             binding++;
         }
         for (u32 i = 0; i < buffers.size(); i++) {
-            if (other.bitset[binding++] && buffers[i] != other.buffers[i]) {
+            if (other.bitset[binding++] && !buffers[i].IsCompatible(other.buffers[i])) {
                 return false;
             }
         }
         for (u32 i = 0; i < tex_buffers.size(); i++) {
-            if (other.bitset[binding++] && tex_buffers[i] != other.tex_buffers[i]) {
+            if (other.bitset[binding++] && !tex_buffers[i].IsCompatible(other.tex_buffers[i])) {
                 return false;
             }
         }
         for (u32 i = 0; i < images.size(); i++) {
-            if (other.bitset[binding++] && images[i] != other.images[i]) {
+            if (other.bitset[binding++] && !images[i].IsCompatible(other.images[i])) {
                 return false;
             }
         }
         for (u32 i = 0; i < fmasks.size(); i++) {
-            if (other.bitset[binding++] && fmasks[i] != other.fmasks[i]) {
+            if (other.bitset[binding++] && !fmasks[i].IsCompatible(other.fmasks[i])) {
                 return false;
             }
         }
         for (u32 i = 0; i < samplers.size(); i++) {
-            if (samplers[i] != other.samplers[i]) {
+            if (!samplers[i].IsCompatible(other.samplers[i])) {
                 return false;
             }
         }
