@@ -19,7 +19,7 @@ struct ImageInfo {
     ImageInfo(const AmdGpu::Liverpool::ColorBuffer& buffer,
               const AmdGpu::Liverpool::CbDbExtent& hint = {}) noexcept;
     ImageInfo(const AmdGpu::Liverpool::DepthBuffer& buffer, u32 num_slices, VAddr htile_address,
-              const AmdGpu::Liverpool::CbDbExtent& hint = {}, bool buffer_read = false) noexcept;
+              bool use_write, const AmdGpu::Liverpool::CbDbExtent& hint = {}) noexcept;
     ImageInfo(const AmdGpu::Image& image, const Shader::ImageResource& desc) noexcept;
 
     bool IsTiled() const {

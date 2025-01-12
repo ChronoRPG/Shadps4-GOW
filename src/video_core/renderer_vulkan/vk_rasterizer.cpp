@@ -162,8 +162,8 @@ RenderState Rasterizer::PrepareRenderState(u32 mrt_mask) {
         const auto& hint = liverpool->last_db_extent;
         auto& [image_id, desc] =
             db_desc.emplace(std::piecewise_construct, std::tuple{},
-                            std::tuple{regs.depth_buffer, regs.depth_view, regs.depth_control,
-                                       htile_address, hint});
+                            std::tuple{regs.depth_buffer, regs.depth_view, htile_address,
+                                       regs.depth_control.depth_write_enable, hint});
         const auto& image_view = texture_cache.FindDepthTarget(desc);
         image_id = bound_images.emplace_back(image_view.image_id);
         auto& image = texture_cache.GetImage(image_id);
@@ -923,11 +923,11 @@ void Rasterizer::DepthStencilCopy(bool is_depth, bool is_stencil) {
     auto& regs = liverpool->regs;
 
     auto read_desc = VideoCore::TextureCache::DepthTargetDesc(
-        regs.depth_buffer, regs.depth_view, regs.depth_control,
-        regs.depth_htile_data_base.GetAddress(), liverpool->last_db_extent, true);
+        regs.depth_buffer, regs.depth_view, regs.depth_htile_data_base.GetAddress(), false,
+        liverpool->last_db_extent);
     auto write_desc = VideoCore::TextureCache::DepthTargetDesc(
-        regs.depth_buffer, regs.depth_view, regs.depth_control,
-        regs.depth_htile_data_base.GetAddress(), liverpool->last_db_extent, false);
+        regs.depth_buffer, regs.depth_view, regs.depth_htile_data_base.GetAddress(), true,
+        liverpool->last_db_extent);
 
     auto& read_image = texture_cache.GetImage(texture_cache.FindImage(read_desc));
     auto& write_image = texture_cache.GetImage(texture_cache.FindImage(write_desc));
