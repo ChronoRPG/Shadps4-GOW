@@ -77,12 +77,11 @@ public:
 
     struct DepthTargetDesc : public BaseDesc {
         DepthTargetDesc(const AmdGpu::Liverpool::DepthBuffer& buffer,
-                        const AmdGpu::Liverpool::DepthView& view,
-                        const AmdGpu::Liverpool::DepthControl& ctl, VAddr htile_address,
-                        const AmdGpu::Liverpool::CbDbExtent& hint = {})
+                        const AmdGpu::Liverpool::DepthView& view, VAddr htile_address,
+                        bool use_write, const AmdGpu::Liverpool::CbDbExtent& hint = {})
             : BaseDesc{BindingType::DepthTarget,
-                       ImageInfo{buffer, view.NumSlices(), htile_address, hint},
-                       ImageViewInfo{buffer, view, ctl}} {}
+                       ImageInfo{buffer, view.NumSlices(), htile_address, use_write, hint},
+                       ImageViewInfo{buffer, view, use_write}} {}
     };
 
     struct VideoOutDesc : public BaseDesc {

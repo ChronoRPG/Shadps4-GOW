@@ -61,11 +61,10 @@ ImageViewInfo::ImageViewInfo(const AmdGpu::Liverpool::ColorBuffer& col_buffer) n
 }
 
 ImageViewInfo::ImageViewInfo(const AmdGpu::Liverpool::DepthBuffer& depth_buffer,
-                             AmdGpu::Liverpool::DepthView view,
-                             AmdGpu::Liverpool::DepthControl ctl) {
+                             AmdGpu::Liverpool::DepthView view, bool use_write) {
     format = Vulkan::LiverpoolToVK::DepthFormat(depth_buffer.z_info.format,
                                                 depth_buffer.stencil_info.format);
-    is_storage = ctl.depth_write_enable;
+    is_storage = use_write;
     range.base.layer = view.slice_start;
     range.extent.layers = view.NumSlices() - range.base.layer;
     type = range.extent.layers > 1 ? vk::ImageViewType::e2DArray : vk::ImageViewType::e2D;
