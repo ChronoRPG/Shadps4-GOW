@@ -11,8 +11,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>970</width>
-    <height>750</height>
+    <width>1010</width>
+    <height>930</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -67,8 +67,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>946</width>
-         <height>536</height>
+         <width>986</width>
+         <height>765</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="generalTabVLayout" stretch="0">
@@ -389,7 +389,7 @@
             <item>
              <widget class="QGroupBox" name="CompatgroupBox">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -413,6 +413,74 @@
                <property name="bottomMargin">
                 <number>11</number>
                </property>
+               <item>
+                <widget class="QGroupBox" name="widgetComboBox">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>75</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="title">
+                  <string>Current Widget Style</string>
+                 </property>
+                 <layout class="QVBoxLayout" name="currentwidgetLayout">
+                  <item>
+                   <widget class="QComboBox" name="currentwidgetComboBox">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="sizeIncrement">
+                     <size>
+                      <width>0</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="baseSize">
+                     <size>
+                      <width>0</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <item>
+                     <property name="text">
+                      <string>Fusion</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>System</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
                <item>
                 <widget class="QCheckBox" name="enableCompatibilityCheckBox">
                  <property name="text">
@@ -637,8 +705,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>926</width>
-         <height>536</height>
+         <width>986</width>
+         <height>765</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="inputTabVLayout" stretch="0,0">
@@ -829,7 +897,7 @@
                   <bool>true</bool>
                  </property>
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -935,8 +1003,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>926</width>
-         <height>536</height>
+         <width>986</width>
+         <height>765</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="graphicsTabVLayout" stretch="0,0">
@@ -1186,8 +1254,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>926</width>
-         <height>536</height>
+         <width>986</width>
+         <height>765</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="pathsTabLayout" stretch="0">
@@ -1226,22 +1294,6 @@
             </layout>
            </widget>
           </item>
-          <item>
-           <spacer name="horizontalSpacer">
-            <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
-            </property>
-            <property name="sizeType">
-             <enum>QSizePolicy::Policy::Preferred</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
          </layout>
         </item>
        </layout>
@@ -1259,8 +1311,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>926</width>
-         <height>536</height>
+         <width>986</width>
+         <height>765</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="debugTabVLayout" stretch="0,1">
